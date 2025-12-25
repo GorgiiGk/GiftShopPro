@@ -8,14 +8,14 @@ from db import (
     get_product,
     get_or_create_user,
     list_orders_for_user,
+    create_order,
 )
 
-# ✅ Загружаем .env (чтобы в PythonAnywhere заработало)
+# Загружаем .env (чтобы работало и в PythonAnywhere)
 load_dotenv()
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 PUBLIC_WEBAPP_URL = os.getenv("PUBLIC_WEBAPP_URL", "")
-DB_PATH = os.getenv("DB_PATH", "/home/GiftUpR0bot/GiftShopPro/shop.db")
 
 if not BOT_TOKEN:
     raise RuntimeError("BOT_TOKEN missing (create .env and put BOT_TOKEN=...)")
@@ -24,22 +24,22 @@ app = FastAPI(title="GiftShopPro Web")
 
 
 # -------------------------
-# Helpers (пример)
+# Telegram WebApp initData validation (ЗАГЛУШКА)
 # -------------------------
 def validate_init(initData: str):
     """
-    Тут должна быть твоя функция валидации Telegram WebApp initData.
-    Пока что сделаем заглушку, чтобы API хотя бы запускался.
+    Тут должна быть НОРМАЛЬНАЯ проверка initData (HMAC).
+    Пока заглушка, чтобы API запускался.
     """
     if not initData:
         raise Exception("initData is empty")
-    # Если у тебя уже есть нормальная validate_init — вставь её сюда
-    return (123, "Test", "testuser")
+    # Возвращаем tg_user_id, first_name, username
+    return (7356182654, "Admin", "admin")  # <- временно
 
 
 @app.get("/health")
 def health():
-    return {"ok": True}
+    return {"ok": True, "public_url": PUBLIC_WEBAPP_URL}
 
 
 @app.get("/api/products")
@@ -69,7 +69,7 @@ def my_orders(initData: str):
         raise HTTPException(401, "Unauthorized")
 
     get_or_create_user(tg_user_id, first_name, username)
-    os_ = list_orders_for_user(tg_user_id, 50)
+    orders = list_orders_for_user(tg_user_id, 50)
 
     return [{
         "id": o["id"],
@@ -78,14 +78,40 @@ def my_orders(initData: str):
         "amount": o["amount"],
         "gift_delivered": bool(o["gift_delivered"]),
         "delivered_code": o["delivered_code"],
-    } for o in os_]
+        "product_id": o["product_id"],
+        "created_at": o["created_at"],
+    } for o in orders]
 
 
 @app.post("/api/orders")
 async def make_order(req: Request, initData: str):
-    # На PythonAnywhere мы НЕ делаем invoice из WebApp.
-    # Это лучше делать через бота.
-    raise HTTPException(400, "Invoice must be initiated by bot.")
+    """
+    WebApp НЕ отправляет invoice.
+    Она только создаёт заказ.
+    Дальше ты выдаёшь кнопки оплаты в боте.
+    """
+    try:
+        tg_user_id, first_name, username = validate_init(initData)
+    except Exception:
+        raise HTTPException(401, "Unauthorized")
+
+    get_or_create_user(tg_user_id, first_name, username)
+
+    body = await req.json()
+    pid = int(body.get("product_id", 0))
+
+    p = get_product(pid)
+    if not p:
+        raise HTTPException(404, "Product not found")
+
+    order_id = create_order(
+        tg_user_id=tg_user_id,
+        product_id=pid,
+        currency=p["currency_provider"],
+        amount=p["price_provider"],
+    )
+
+    return {"ok": True, "order_id": order_id}
 
 
 @app.on_event("startup")

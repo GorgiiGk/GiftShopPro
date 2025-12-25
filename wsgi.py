@@ -1,5 +1,4 @@
 from a2wsgi import ASGIMiddleware
-from web import app as fastapi_app
+from web import app
 
-# ✅ WSGI app для PythonAnywhere
-application = ASGIMiddleware(fastapi_app)
+application = ASGIMiddleware(app)

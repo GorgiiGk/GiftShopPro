@@ -1,6 +1,5 @@
-.venv/
+.env
+.venv
 __pycache__/
 *.pyc
-.env
 shop.db
-*.db

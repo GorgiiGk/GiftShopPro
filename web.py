@@ -12,7 +12,7 @@ from db import (
 )
 
 # Загружаем .env (чтобы работало и в PythonAnywhere)
-load_dotenv()
+load_dotenv("/home/GiftUpR0bot/GiftShopPro/.env")
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 PUBLIC_WEBAPP_URL = os.getenv("PUBLIC_WEBAPP_URL", "")

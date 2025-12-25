@@ -1,5 +1,5 @@
 from a2wsgi import ASGIMiddleware
-from web import app
+from web import app as fastapi_app
 
-# PythonAnywhere ждёт WSGI callable под именем "application"
-application = ASGIMiddleware(app)
+# ✅ WSGI app для PythonAnywhere
+application = ASGIMiddleware(fastapi_app)
